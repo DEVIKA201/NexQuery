@@ -3,3 +3,4 @@ openai 1.35.3
 en-core-web-sm==3.7.1
 langchain-0.2.6-py3-none-any.whl.metadata
 llama_index-0.10.50
+Streamlit, version 1.35.0
