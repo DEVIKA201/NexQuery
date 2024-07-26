@@ -1,139 +1,93 @@
-#pip install langchain
-#pip install faiss-cpu *
-#pip install openai
-#pip install llama_index
-
-import weight_assign
-import re
 import spacy
-import openai
-import pandas as pd
-import queries
-
-nlp = spacy.load('en_core_web_sm')
-df = weight_assign.df
+from transformers import pipeline, GPT2Tokenizer, GPT2LMHeadModel
+import re
 
 class QueryHandler:
-#parsing the query
-    def parse_query(self, query):
-        doc = nlp(query.lower())
-        entities = {ent.label_: ent.text for ent in doc.ents}
-        return entities
+    def __init__(self, dataframe):
+        self.dataframe = dataframe
+        self.available_columns = self.dataframe.columns.tolist()
+        self.nlp = spacy.load("en_core_web_sm")
+        self.gpt2_tokenizer = GPT2Tokenizer.from_pretrained("gpt2")
+        self.gpt2_tokenizer.pad_token_id = self.gpt2_tokenizer.eos_token_id  
+        self.gpt2_model = GPT2LMHeadModel.from_pretrained("gpt2")
+        self.gpt2 = pipeline("text-generation", model=self.gpt2_model, tokenizer=self.gpt2_tokenizer)
 
-#basic lead deatils like location, treatment, priority, BD, source, high and low importance
-    def lead_details(self, query):
-        query=query.lower()
+    def process_query(self, query):
+        conditions, columns = self.extract_conditions_and_columns_from_query(query)
+        response = self.handle_column_query(conditions, columns, query)
+        if response:
+            return response
+        return "**No entries found matching the conditions.**"
 
-        if 'patient' in query:
-            return df[['enquiry_id', 'patient_name']].to_string(index=False)   
-        elif 'priority' in query:
-            if 'critical' in query:
-                return df[df['priority'] == 'Critical'][['enquiry_id', 'priority']].to_string(index=False)
-            elif 'essential' in query:
-                return df[df['priority'] == 'Essential'][['enquiry_id', 'priority']].to_string(index=False)
-            return df[['enquriy_id', 'priority']].to_string(index = False)
-        elif 'treatment' in query:
-            treatment = re.findall(r'treatment (\w+)', query)
-            if treatment:
-                return df[df['treatment'].str.lower() == treatment[0].lower()][['enquiry_id', 'treatment']].to_string(index=False)  
-            return df[['enquiry_id', 'treatment']].to_string(index = False)
-        elif 'location' in query:
-            location = re.findall(r'location (\w+)', query)
-            if location:
-                return df[df['location'].str.lower() == treatment[0].lower()][['enquiry_id', 'location']].to_string(index=False)  
-            return df[['enquiry_id', 'location']].to_string(index= False)
-        elif 'importance' in query:
-            if 'high' in query:
-                return df[df['total_importance'] >= 0.1][['enquiry_id', 'total_importance']].to_string(index=False)
-            elif 'low' in query:
-                return df[df['total_importance'] < 0.1][['enquiry_id', 'total_importance']].to_string(index=False)
-            return df[['enquiry_id','total_importance']].to_string(index=False)          
-        else:
-            return "Query not accurate. Please provide a more detailed question."
+    def extract_conditions_and_columns_from_query(self, query):
+        conditions = {}
+        columns = []
 
-#Combining multiple conditions
-    def combined_lead_details(self, query):
-        entities = self.parse_query(query)
-        query = query.lower()
-        if 'priority' in query and 'location' in query:
-            location = re.findall(r'location (\w+)',query)
-            priority = re.findall(r'priority (\w+)',query)
-            if location and priority:
-                return df[(df['location'].str.lower() == location[0].lower()) & (df['priority'].str.lower() == priority[0].lower())][['enquiry_id','priority','location']].to_string(index =False)
-            elif 'priority' in query and 'source' in query:
-                source = re.findall(r'source (\w+)',query)
-                priority = re.findall(r'priority (\w+)',query)
-                if source and priority:
-                    return df[(df['source'].str.lower() == source[0].lower()) & (df['priority'].str.lower() == priority[0].lower())][['enquiry_id','priority','source']].to_string(index =False) 
-            elif 'priority' in query and 'treatment' in query:
-                treatment = re.findall(r'treatment (\w+)',query) 
-                priority = re.findall(r'priority (\w+)',query)
-                if treatment and priority:
-                    return df[(df['treatment'].str.lower() == treatment[0].lower()) & (df['priority'].str.lower() == priority[0].lower())][['enquiry_id','priority','treatment']].to_string(index =False) 
-            elif 'priority' in query and 'BD' in entities:
-                bd = entities['BD']
-                return df[df['bd'].str.lower() == bd][['enquiry_id','bd']].to_string(index=False)
-            else:
-                return "Query not accurate. Please provide a more detailed question."
+        # Use spaCy to process the query
+        doc = self.nlp(query.lower())
 
-#handle aggregate functions
-    def lead_count(self, query):
-        query = query.lower()
-
-        if 'total count' in query:
-            if 'patient' in query: 
-                print(f"Total number of patients: {df['patient_name'].nunique()}")
-                return f"Total number of patients: {df['patient_name'].nunique()}"
-            
-            elif 'treatment' in query:
-                treatment = query.split('treatment ')[-1].strip()
-                return f"Number of cases for treatment '{treatment}': {df[df['treatment'].str.lower() == treatment.lower()].shape[0]}"
-            elif 'priority' in query:
-                priority = query.split('priority ')[-1].strip()
-                return f"Number of cases with priority '{priority}': {df[df['priority'].str.lower() == priority.lower()].shape[0]}"
-            elif 'source' in query:
-                source = query.split('source ')[-1].strip()
-                return f"Number of cases in source '{source}': {df[df['source'].str.lower() == source.lower()].shape[0]}"            
-            else:
-                "Query not acceptable. Kindly enquire with respect to the context."
-        elif 'average' in query:
-            if 'importance' in query:
-                return f"Average importance: df{['total_importance'].mean():.4f}"
-        else:
-            return "Query not accurate. Please provide a more detailed question."
-
-    #handler function
-    def handle_query(self, query):
-        method_map = {
-            'lead details' : 'lead_details',
-            'combined lead details': 'combined_lead_details',
-            'lead count': 'lead_count'
+        # Define patterns for matching conditions
+        patterns = {
+            'priority': 'priority',
+            'location': 'location',
+            'treatment': 'treatment',
+            'bd': 'bd',
+            'patient_name': 'patient name',
+            'source': 'source',
         }
 
-        #determining the method to call
-        for key in method_map:
-            if key in query.lower():
-                method_name = method_map[key]
-                method = getattr(self, method_name)
-                return method(query)
-        return "Query not accurate. Please provide a more detailed question."
+        # Extract conditions from the query
+        for token in doc:
+            for key, pattern in patterns.items():
+                if pattern in token.text:
+                    next_token_idx = token.i + 1
+                    if next_token_idx < len(doc):
+                        next_token = doc[next_token_idx]
+                        conditions[key] = next_token.text.strip()
 
-#OpenAI API
-openai.api_key = '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'
+        # Extract columns to display
+        for ent in doc.ents:
+            if ent.label_ == "NOUN" and ent.text in self.available_columns:
+                columns.append(ent.text)
 
-#integrate openai
-def ask_openai(query, dataframe_context):
-    response = openai.completions.create(
-        model = "gpt-3.5-turbo-instruct",
-        prompt= f"The answer to your query:\n\n{dataframe_context}\n\nUser query: {query}\n\nAnswer:",
-        max_tokens= 150 
-    )
-    return response.choices[0].text.strip()
+        # Fallback to regex for extracting display only part
+        display_match = re.search(r'display\s+only\s+(.+)', query)
+        if display_match:
+            display_cols = display_match.group(1).strip().split(',')
+            columns.extend([col.strip() for col in display_cols if col.strip() in self.available_columns])
 
-while True:
-    user_query = input("Enter your query: ")
-    if user_query.lower() in ['exit','quit','Exit']:
-        break
-    dataframe_context = df.to_string(index = False)
-    response = ask_openai(user_query, dataframe_context)
-    print(response) 
+        return conditions, columns
+
+    def handle_column_query(self, conditions, columns, query):
+        if conditions:
+            filtered_data = self.dataframe.copy()
+            for col, val in conditions.items():
+                if col in self.available_columns:
+                    filtered_data = filtered_data[filtered_data[col].str.contains(val, case=False, na=False)]
+
+            if not filtered_data.empty:
+                # Handling specific column display requests
+                if len(columns) > 0:
+                    valid_columns = [col for col in columns if col in self.available_columns]
+                    if valid_columns:
+                        return f"Here are the requested details:\n\n{filtered_data[valid_columns].to_html(index=False, escape=False)}"
+
+                # Prepare GPT-2 prompt
+                prompt = f"Based on your query '{query}', I found {len(filtered_data)} entries.\n\n"
+
+                # Combine elements for response
+                response = f"Based on your query '{query}', I found {len(filtered_data)} entries.\n\n\n\nHere are the details of the retrieved leads:\n\n{filtered_data.to_html(index=False, escape=False)}"
+                return response
+
+            else:
+                return f"**No entries found matching the conditions: {conditions}.**"
+
+        return None
+
+    def generate_gpt2_response(self, prompt):
+        inputs = self.gpt2_tokenizer(prompt, return_tensors="pt", max_length=150, truncation=True, padding=True)
+        outputs = self.gpt2_model.generate(inputs['input_ids'], max_new_tokens=50, pad_token_id=self.gpt2_tokenizer.eos_token_id)
+        return self.gpt2_tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    def count_entries_by_priority(self):
+        return self.dataframe['priority'].value_counts().to_string()
