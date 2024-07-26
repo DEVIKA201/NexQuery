@@ -1,0 +1,114 @@
+.custom-container {
+    font-family: Arial, sans-serif;
+    background-color: #f9f9f9;
+    margin: 0;
+    padding: 0;
+}
+
+.chat-container {
+    max-width: 800px;
+    margin: auto;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.message-container {
+    margin-bottom: 10px;
+    clear: both;
+    overflow: auto;
+}
+
+.user-message {
+    float: right;
+    clear: both;
+    max-width: 70%;
+    margin-left: 30%;
+    background-color: #6883bc;
+    color: white;
+    padding: 10px;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    margin-bottom: 5px;
+    word-wrap: break-word;
+}
+
+.bot-message {
+    float: left;
+    clear: both;
+    max-width: 70%;
+    margin-right: 30%;
+    background-color: #3b4d61;
+    color: white;
+    padding: 10px;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+    margin-bottom: 5px;
+    word-wrap: break-word;
+}
+
+.dataframe-container {
+    margin-top: 20px;
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dataframe {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.dataframe th, .dataframe td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+}
+
+.dataframe th {
+    background-color: #373f49;
+    text-align: center;
+    color: #ffffff;
+}
+
+.dataframe td {
+    background-color: #ffffff;
+    color: #333;
+    white-space: nowrap;
+}
+
+.input-container {
+    margin-top: 20px;
+    overflow: hidden;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    padding-left: 10px;
+}
+
+.title-text {
+    font-size: 32px;
+    font-weight: bold;
+    color: #3b4d61;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.scrollable {
+    max-height: 200px; /* Adjust the height as needed */
+    overflow-y: auto;
+}
+
+.message-container {
+    margin-bottom: 10px;
+}
+
+.expander {
+    background-color: #020202;
+    padding: 10px;
+    border-radius: 10px;
+    margin-top: 5px;
+}
