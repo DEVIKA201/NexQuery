@@ -43,9 +43,6 @@ To run the project, you need to install the following Python packages:
 - **pandas**: pip3 install pandas
 - **streamlit**: pip3 install streamlit
 - **spacy**: pip3 install spacy
-- **transformers**: pip3 install transformers
-pip install streamlit-toast
-
 
 ## Sample Queries
 Here are some example queries that the Sales BD AI Agent can handle:
