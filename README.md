@@ -1,4 +1,4 @@
-# NexQuery: A Chatbot driven Database Discover 
+# NexQuery: A Chatbot driven Database Discoverer
 ## Table of Contents
 - [Introduction](#introduction)
 - [Features](#features)
